@@ -1,52 +1,64 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState } from "react";
 import "./App.css";
-import axios from "axios";
+import useSWR from "swr";
+import { fetcher } from "./fetcher";
 
 interface IDataResponse {
 	id: number;
 	name: string;
 }
 
+type Event = React.ChangeEvent<HTMLInputElement>;
+
 function App() {
-	const [data, setData] = useState<IDataResponse[]>([]);
-	const [filter, setFilter] = useState("");
+	const [inputValue, setInputValue] = useState<string>("");
+	const [filteredData, setFilteredData] = useState<IDataResponse[]>([]);
+	const { data, error, isLoading } = useSWR(
+		"https://jsonplaceholder.typicode.com/users",
+		fetcher
+	);
 
-	useEffect(() => {
-		try {
-			axios.get("https://jsonplaceholder.typicode.com/users").then((res) => {
-				// console.log(res.data)
-				setData(res.data);
-			});
-		} catch (error) {
-			console.log(error);
-		}
-	}, [data]);
+	const searchData = (e: Event) => {
+		setInputValue(e.target.value);
 
-	const filteredData = useMemo(() => {
-		return data.filter((item: IDataResponse) =>
-			item.name.toLowerCase().includes(filter.toLowerCase())
+		if (!inputValue) return data;
+
+		const filtered = data.filter((fetched: IDataResponse) =>
+			fetched.name
+				.trim()
+				.toLowerCase()
+				.includes(inputValue.trim().toLowerCase())
 		);
-	}, [data, filter]);
 
-	const searchData = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setFilter(e.target.value);
+		setFilteredData(filtered);
 	};
 
-	return (
-		<div className="App">
-			<input type="text" value={filter} onChange={(e) => searchData(e)} />
+	const displayedData: IDataResponse[] =
+		filteredData.length > 0 ? filteredData : data;
 
-			{filteredData ? (
-				<ul>
-					{filteredData?.map((item: IDataResponse) => (
-						<li key={item.id}>
-							{item.id} - {item.name}
-						</li>
-					))}
-				</ul>
-			) : (
-				"No data"
-			)}
+	if (isLoading)
+		return (
+			<div className="app">
+				<h1>Loading...</h1>
+			</div>
+		);
+	if (error)
+		return (
+			<div className="app">
+				<h1>Cannot load data</h1>
+			</div>
+		);
+
+	return (
+		<div className="app">
+			<ul>
+				<input value={inputValue} type="text" onChange={(e) => searchData(e)} />
+				{displayedData.map((fetched: IDataResponse) => (
+					<li key={fetched.id}>
+						{fetched.id} - {fetched.name}
+					</li>
+				))}
+			</ul>
 		</div>
 	);
 }
