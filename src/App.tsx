@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import useSWR from "swr";
 import { fetcher } from "./fetcher";
@@ -18,12 +18,14 @@ function App() {
 		fetcher
 	);
 
-	const searchData = (e: Event) => {
-		setInputValue(e.target.value);
+	const fetchedData: IDataResponse[] = data;
 
-		if (!inputValue) return data;
+	useEffect(() => {
+		setFilteredData(fetchedData);
+	}, [fetchedData]);
 
-		const filtered = data.filter((fetched: IDataResponse) =>
+	const searchData = () => {
+		const filtered = fetchedData.filter((fetched: IDataResponse) =>
 			fetched.name
 				.trim()
 				.toLowerCase()
@@ -32,9 +34,6 @@ function App() {
 
 		setFilteredData(filtered);
 	};
-
-	const displayedData: IDataResponse[] =
-		filteredData.length > 0 ? filteredData : data;
 
 	if (isLoading)
 		return (
@@ -52,13 +51,19 @@ function App() {
 	return (
 		<div className="app">
 			<ul>
-				<input value={inputValue} type="text" onChange={(e) => searchData(e)} />
-				{displayedData.map((fetched: IDataResponse) => (
+				<input
+					value={inputValue}
+					type="text"
+					onKeyUp={() => searchData()}
+					onChange={(e: Event) => setInputValue(e.target.value)}
+				/>
+				{filteredData?.map((fetched: IDataResponse) => (
 					<li key={fetched.id}>
 						{fetched.id} - {fetched.name}
 					</li>
 				))}
 			</ul>
+			{!isLoading && filteredData?.length < 1 && <h1>No Match</h1>}
 		</div>
 	);
 }
